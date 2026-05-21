@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTP Smart Parking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --navy: #0f2057;
+    --navy-mid: #1a3580;
+    --blue: #1e4fd8;
+    --blue-light: #3b6ef5;
+    --accent: #f59e0b;
+    --accent2: #10b981;
+    --danger: #ef4444;
+    --warn: #f97316;
+    --bg: #f0f4ff;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --sidebar-w: 230px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* ===== SCREENS ===== */
+  .screen { display:none; min-height:100vh; }
+  .screen.active { display:flex; }
+
+  /* ===== LANDING / USER APP ===== */
+  #screen-user {
+    flex-direction:column;
+    background:linear-gradient(160deg,#0f2057 0%,#1a3580 50%,#1e4fd8 100%);
+    align-items:center; justify-content:flex-start;
+    padding-bottom:40px;
+  }
+  .user-header {
+    width:100%; padding:20px 24px 0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo-wrap { display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:38px; height:38px; background:var(--accent); border-radius:10px;
+    display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .logo-text { color:#fff; font-weight:800; font-size:18px; line-height:1.1; }
+  .logo-sub { color:rgba(255,255,255,.6); font-size:11px; font-weight:500; }
+  .header-btn { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.2);
+    color:#fff; border-radius:10px; padding:8px 16px; font-size:13px; cursor:pointer;
+    font-family:inherit; font-weight:600; transition:.2s; }
+  .header-btn:hover { background:rgba(255,255,255,.25); }
+
+  .hero-section { width:100%; padding:32px 24px 0; text-align:center; }
+  .hero-title { color:#fff; font-size:28px; font-weight:800; line-height:1.2; }
+  .hero-title span { color:var(--accent); }
+  .hero-sub { color:rgba(255,255,255,.7); font-size:14px; margin-top:8px; }
+
+  /* Slot grid */
+  .slot-card {
+    background:rgba(255,255,255,.08); backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.15); border-radius:20px;
+    margin:24px 16px 0; padding:20px;
+  }
+  .slot-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .slot-card-title { color:#fff; font-weight:700; font-size:15px; }
+  .live-dot { display:flex; align-items:center; gap:6px; color:var(--accent2); font-size:12px; font-weight:600; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--accent2);
+    animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+  .slot-zone-label { color:rgba(255,255,255,.5); font-size:11px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+  .slot-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+  .slot-item {
+    border-radius:12px; padding:12px 8px; text-align:center; cursor:pointer;
+    transition:.2s; border:2px solid transparent;
+    display:flex; flex-direction:column; gap:4px; align-items:center;
+  }
+  .slot-item.kosong { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.4); }
+  .slot-item.terisi { background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.3); pointer-events:none; }
+  .slot-item.selected { border-color:var(--accent); background:rgba(245,158,11,.15); }
+  .slot-item:hover.kosong { border-color:var(--accent2); transform:translateY(-2px); }
+  .slot-name { color:#fff; font-weight:700; font-size:14px; }
+  .slot-status { font-size:10px; font-weight:600; }
+  .slot-item.kosong .slot-status { color:var(--accent2); }
+  .slot-item.terisi .slot-status { color:#f87171; }
+  .slot-item.selected .slot-status { color:var(--accent); }
+  .slot-icon { font-size:18px; }
+
+  .tarif-info { display:flex; gap:8px; margin-top:4px; }
+  .tarif-badge {
+    flex:1; background:rgba(255,255,255,.08); border-radius:10px; padding:10px;
+    text-align:center;
+  }
+  .tarif-badge .val { color:#fff; font-weight:700; font-size:14px; }
+  .tarif-badge .lbl { color:rgba(255,255,255,.5); font-size:10px; }
+
+  /* QR Section */
+  .qr-section { margin:20px 16px 0; }
+  .qr-card {
+    background:#fff; border-radius:20px; padding:24px;
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .qr-title { font-weight:800; font-size:16px; color:var(--navy); }
+  .qr-sub { color:var(--muted); font-size:12px; text-align:center; }
+  #qr-code-user { display:flex; justify-content:center; }
+  .qr-url-text { font-size:10px; color:var(--muted); text-align:center; word-break:break-all; }
+
+  /* Parkir button */
+  .btn-parkir {
+    margin:20px 16px 0; width:calc(100% - 32px);
+    background:linear-gradient(135deg,var(--accent),#f97316);
+    color:#fff; font-weight:800; font-size:16px; border:none; border-radius:16px;
+    padding:18px; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    box-shadow:0 8px 24px rgba(245,158,11,.4); transition:.2s;
+  }
+  .btn-parkir:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(245,158,11,.5); }
+
+  /* Reward strip */
+  .reward-strip {
+    margin:16px 16px 0; background:rgba(16,185,129,.12);
+    border:1px solid rgba(16,185,129,.3); border-radius:14px;
+    padding:14px 16px; display:flex; align-items:center; gap:12px;
+  }
+  .reward-icon { font-size:24px; }
+  .reward-text { flex:1; }
+  .reward-text strong { color:#fff; font-size:13px; display:block; }
+  .reward-text span { color:rgba(255,255,255,.6); font-size:11px; }
+  .reward-pts { background:var(--accent2); color:#fff; font-weight:800; font-size:12px;
+    padding:4px 10px; border-radius:20px; white-space:nowrap; }
+
+  /* Bottom nav user */
+  .user-bottom-nav {
+    position:fixed; bottom:0; left:0; right:0;
+    background:rgba(15,32,87,.95); backdrop-filter:blur(12px);
+    border-top:1px solid rgba(255,255,255,.1);
+    display:flex; justify-content:space-around; padding:10px 0 16px;
+    z-index:100;
+  }
+  .nav-item { display:flex; flex-direction:column; align-items:center; gap:4px;
+    color:rgba(255,255,255,.4); font-size:10px; font-weight:600; cursor:pointer;
+    padding:4px 16px; border-radius:12px; transition:.2s; }
+  .nav-item.active { color:var(--accent); }
+  .nav-item:hover { color:rgba(255,255,255,.8); }
+  .nav-icon { font-size:20px; }
+
+  /* ===== PAYMENT SCREEN ===== */
+  #screen-payment {
+    flex-direction:column; background:var(--bg);
+  }
+  .payment-header {
+    background:linear-gradient(135deg,var(--navy),var(--navy-mid));
+    padding:20px 20px 32px; color:#fff;
+  }
+  .back-btn { background:rgba(255,255,255,.15); border:none; color:#fff;
+    border-radius:10px; padding:8px 14px; cursor:pointer; font-family:inherit;
+    font-size:13px; font-weight:600; margin-bottom:16px; display:inline-flex;
+    align-items:center; gap:6px; }
+  .payment-header h2 { font-size:22px; font-weight:800; }
+  .payment-header p { color:rgba(255,255,255,.7); font-size:13px; margin-top:4px; }
+
+  .payment-content { padding:0 16px; margin-top:-16px; flex:1; overflow-y:auto; padding-bottom:100px; }
+
+  .info-card {
+    background:#fff; border-radius:16px; padding:16px; margin-bottom:12px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+  }
+  .info-row { display:flex; justify-content:space-between; align-items:center;
+    padding:8px 0; border-bottom:1px solid var(--border); }
+  .info-row:last-child { border-bottom:none; }
+  .info-row .label { color:var(--muted); font-size:13px; }
+  .info-row .value { font-weight:700; font-size:13px; color:var(--text); }
+  .badge-green { background:#dcfce7; color:#16a34a; padding:3px 10px;
+    border-radius:20px; font-size:11px; font-weight:700; }
+  .badge-blue { background:#dbeafe; color:#1d4ed8; padding:3px 10px;
+    border-radius:20px; font-size:11px; font-weight:700; }
+
+  .timer-card {
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    border-radius:16px; padding:20px; margin-bottom:12px; text-align:center; color:#fff;
+  }
+  .timer-label { font-size:12px; opacity:.7; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+  .timer-display { font-size:48px; font-weight:800; font-family:'Space Grotesk',sans-serif;
+    letter-spacing:.05em; margin:8px 0; }
+  .timer-sub { font-size:12px; opacity:.6; }
+
+  .payment-method { margin-bottom:12px; }
+  .method-title { font-weight:700; font-size:14px; margin-bottom:10px; }
+  .method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .method-btn {
+    background:#fff; border:2px solid var(--border); border-radius:12px;
+    padding:12px 8px; text-align:center; cursor:pointer; transition:.2s;
+    font-family:inherit;
+  }
+  .method-btn.active { border-color:var(--blue); background:#eff6ff; }
+  .method-btn .m-icon { font-size:22px; display:block; margin-bottom:4px; }
+  .method-btn .m-name { font-size:11px; font-weight:700; color:var(--text); }
+
+  .qris-display {
+    background:#fff; border-radius:16px; padding:20px; text-align:center; margin-bottom:12px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+  }
+  #qr-payment { display:flex; justify-content:center; margin:12px 0; }
+  .qris-amount { font-size:22px; font-weight:800; color:var(--navy); }
+  .qris-note { font-size:11px; color:var(--muted); margin-top:4px; }
+
+  .btn-bayar {
+    width:100%; background:linear-gradient(135deg,var(--blue),var(--blue-light));
+    color:#fff; font-weight:800; font-size:16px; border:none; border-radius:14px;
+    padding:16px; cursor:pointer; font-family:inherit;
+    box-shadow:0 6px 20px rgba(30,79,216,.3); transition:.2s; margin-bottom:8px;
+  }
+  .btn-bayar:hover { transform:translateY(-2px); }
+
+  /* ===== TICKET SCREEN ===== */
+  #screen-ticket {
+    flex-direction:column; background:var(--bg);
+    align-items:center; justify-content:flex-start; padding:20px 16px 100px;
+  }
+  .ticket-card {
+    background:#fff; border-radius:24px; width:100%; max-width:380px;
+    overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.12); margin-top:20px;
+  }
+  .ticket-header {
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    padding:24px; color:#fff; text-align:center;
+  }
+  .ticket-success-icon { font-size:48px; margin-bottom:8px; }
+  .ticket-header h2 { font-size:20px; font-weight:800; }
+  .ticket-header p { opacity:.7; font-size:13px; margin-top:4px; }
+  .ticket-id { background:rgba(255,255,255,.15); border-radius:8px;
+    padding:6px 14px; font-size:12px; font-weight:700; margin-top:12px; display:inline-block; }
+  .ticket-divider {
+    display:flex; align-items:center; position:relative; padding:0;
+    height:24px; background:#fff;
+  }
+  .ticket-divider::before {
+    content:''; position:absolute; left:0; right:0; top:50%;
+    border-top:2px dashed var(--border); transform:translateY(-50%);
+  }
+  .ticket-cut { width:24px; height:24px; border-radius:50%; background:var(--bg);
+    position:absolute; top:0; }
+  .ticket-cut.left { left:-12px; }
+  .ticket-cut.right { right:-12px; }
+  .ticket-body { padding:20px; }
+  .ticket-row { display:flex; justify-content:space-between; padding:10px 0;
+    border-bottom:1px solid var(--border); }
+  .ticket-row:last-child { border-bottom:none; }
+  .ticket-row .tl { color:var(--muted); font-size:12px; }
+  .ticket-row .tv { font-weight:700; font-size:13px; }
+  .ticket-qr { padding:20px; text-align:center; border-top:1px solid var(--border); }
+  .ticket-qr p { font-size:11px; color:var(--muted); margin-top:8px; }
+  #qr-ticket { display:flex; justify-content:center; }
+  .reward-notice {
+    background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:1px solid #bbf7d0;
+    border-radius:14px; padding:14px; margin:16px 0 0; text-align:center; width:100%; max-width:380px;
+  }
+  .reward-notice .rn-icon { font-size:28px; }
+  .reward-notice strong { display:block; font-size:14px; color:#15803d; margin-top:4px; }
+  .reward-notice span { font-size:12px; color:#16a34a; }
+  .btn-selesai {
+    margin-top:16px; width:100%; max-width:380px;
+    background:linear-gradient(135deg,var(--accent),#f97316);
+    color:#fff; font-weight:800; font-size:15px; border:none; border-radius:14px;
+    padding:16px; cursor:pointer; font-family:inherit; transition:.2s;
+  }
+
+  /* ===== ADMIN LAYOUT ===== */
+  #screen-admin {
+    flex-direction:row; background:#f1f5f9; min-height:100vh;
+  }
+  .admin-sidebar {
+    width:var(--sidebar-w); background:var(--navy); min-height:100vh;
+    display:flex; flex-direction:column; padding:24px 0; position:fixed;
+    left:0; top:0; bottom:0; z-index:200;
+  }
+  .sidebar-logo { padding:0 20px 24px; border-bottom:1px solid rgba(255,255,255,.1); }
+  .sidebar-logo-text { color:#fff; font-weight:800; font-size:16px; }
+  .sidebar-logo-sub { color:rgba(255,255,255,.5); font-size:11px; }
+  .sidebar-nav { flex:1; padding:16px 12px; }
+  .sidebar-section { color:rgba(255,255,255,.3); font-size:10px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.08em; padding:0 8px; margin:16px 0 6px; }
+  .sidebar-item {
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    border-radius:10px; color:rgba(255,255,255,.6); cursor:pointer;
+    font-size:13px; font-weight:600; margin-bottom:2px; transition:.2s;
+  }
+  .sidebar-item:hover { background:rgba(255,255,255,.08); color:#fff; }
+  .sidebar-item.active { background:rgba(255,255,255,.12); color:#fff; }
+  .sidebar-item .si-icon { font-size:16px; width:20px; text-align:center; }
+  .sidebar-badge { margin-left:auto; background:var(--danger); color:#fff;
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; }
+  .sidebar-bottom { padding:16px 12px; border-top:1px solid rgba(255,255,255,.1); }
+  .sidebar-bottom .sidebar-item { color:rgba(255,255,255,.5); }
+
+  .admin-main {
+    margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh;
+  }
+  .admin-topbar {
+    background:#fff; border-bottom:1px solid var(--border);
+    padding:0 24px; height:64px; display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; z-index:100;
+  }
+  .topbar-left { display:flex; align-items:center; gap:12px; }
+  .topbar-search {
+    background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    padding:8px 16px; font-size:13px; outline:none; width:260px; font-family:inherit;
+  }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .topbar-btn-primary {
+    background:var(--blue); color:#fff; border:none; border-radius:10px;
+    padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; gap:6px; transition:.2s;
+  }
+  .topbar-btn-primary:hover { background:var(--navy); }
+  .topbar-icon-btn {
+    background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:16px; position:relative;
+  }
+  .notif-dot {
+    position:absolute; top:6px; right:6px; width:8px; height:8px;
+    background:var(--danger); border-radius:50%; border:2px solid #fff;
+  }
+  .admin-avatar {
+    width:36px; height:36px; border-radius:50%;
+    background:linear-gradient(135deg,var(--blue),var(--navy));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px;
+  }
+  .admin-content { padding:24px; flex:1; }
+  .admin-section { display:none; }
+  .admin-section.active { display:block; }
+
+  /* Page title */
+  .page-title { font-size:22px; font-weight:800; color:var(--navy); }
+  .page-sub { color:var(--muted); font-size:13px; margin-top:2px; }
+
+  /* Stats cards */
+  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0; }
+  .stat-card {
+    background:#fff; border-radius:16px; padding:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06); transition:.2s;
+  }
+  .stat-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.1); }
+  .stat-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .stat-card-icon {
+    width:44px; height:44px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+  }
+  .stat-card-icon.blue { background:#eff6ff; }
+  .stat-card-icon.green { background:#f0fdf4; }
+  .stat-card-icon.red { background:#fef2f2; }
+  .stat-card-icon.yellow { background:#fffbeb; }
+  .stat-change { font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; }
+  .stat-change.up { background:#dcfce7; color:#16a34a; }
+  .stat-change.down { background:#fee2e2; color:#dc2626; }
+  .stat-val { font-size:26px; font-weight:800; color:var(--navy); font-family:'Space Grotesk',sans-serif; }
+  .stat-lbl { font-size:12px; color:var(--muted); font-weight:600; margin-top:2px; }
+
+  /* Chart section */
+  .chart-card {
+    background:#fff; border-radius:16px; padding:20px; margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+  }
+  .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .chart-title { font-weight:700; font-size:15px; }
+  .chart-filter {
+    background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    padding:6px 12px; font-size:12px; outline:none; cursor:pointer; font-family:inherit;
+  }
+  .chart-bars { display:flex; align-items:flex-end; gap:8px; height:120px; }
+  .chart-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .chart-bar {
+    width:100%; border-radius:6px 6px 0 0;
+    background:linear-gradient(180deg,var(--blue-light),var(--blue));
+    transition:.3s; min-height:4px;
+  }
+  .chart-bar.highlight { background:linear-gradient(180deg,var(--accent),#f97316); }
+  .chart-day { font-size:11px; color:var(--muted); font-weight:600; }
+
+  /* Notifications */
+  .notif-list { display:flex; flex-direction:column; gap:8px; }
+  .notif-item {
+    display:flex; align-items:center; gap:12px; padding:12px 16px;
+    background:var(--bg); border-radius:12px; border-left:4px solid var(--border);
+  }
+  .notif-item.danger { border-left-color:var(--danger); background:#fef2f2; }
+  .notif-item.success { border-left-color:var(--accent2); background:#f0fdf4; }
+  .notif-item.info { border-left-color:var(--blue); background:#eff6ff; }
+  .notif-item.warn { border-left-color:var(--warn); background:#fff7ed; }
+  .notif-icon { font-size:18px; }
+  .notif-text { flex:1; }
+  .notif-text strong { font-size:13px; display:block; }
+  .notif-text span { font-size:11px; color:var(--muted); }
+
+  /* Zone table */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; padding:10px 14px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+    border-bottom:2px solid var(--border); white-space:nowrap; }
+  td { padding:12px 14px; font-size:13px; border-bottom:1px solid var(--border); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#f8faff; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px;
+    font-size:11px; font-weight:700; white-space:nowrap; }
+  .badge.penuh { background:#fee2e2; color:#dc2626; }
+  .badge.tersedia { background:#dcfce7; color:#16a34a; }
+  .badge.padat { background:#fef9c3; color:#ca8a04; }
+  .badge.tutup { background:#f1f5f9; color:#64748b; }
+  .badge.aktif { background:#dcfce7; color:#16a34a; }
+  .progress-bar { height:6px; border-radius:3px; background:var(--border); overflow:hidden; min-width:80px; }
+  .progress-fill { height:100%; border-radius:3px; transition:.3s; }
+  .progress-fill.red { background:var(--danger); }
+  .progress-fill.green { background:var(--accent2); }
+  .progress-fill.yellow { background:var(--accent); }
+
+  /* Heatmap */
+  .heatmap-wrap { display:flex; gap:16px; }
+  .heatmap-map {
+    flex:0 0 280px; height:300px; border-radius:12px; overflow:hidden;
+    background:#1a1f2e; position:relative;
+  }
+  .heatmap-map img { width:100%; height:100%; object-fit:cover; opacity:.5; }
+  .heatmap-overlay { position:absolute; inset:0; }
+  .hotspot {
+    position:absolute; border-radius:50%;
+    animation:heatPulse 2s infinite;
+  }
+  @keyframes heatPulse { 0%,100%{transform:scale(1);opacity:.8} 50%{transform:scale(1.15);opacity:1} }
+  .hotspot.critical { background:radial-gradient(circle,rgba(239,68,68,.9),rgba(239,68,68,0)); }
+  .hotspot.warn { background:radial-gradient(circle,rgba(249,115,22,.8),rgba(249,115,22,0)); }
+  .hotspot.normal { background:radial-gradient(circle,rgba(59,130,246,.6),rgba(59,130,246,0)); }
+
+  .heatmap-legend { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .legend-item { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+  .legend-dot { width:12px; height:12px; border-radius:50%; }
+  .heatmap-analysis { flex:1; display:flex; flex-direction:column; gap:10px; }
+  .hotspot-card {
+    background:#fff; border-radius:12px; padding:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid var(--border);
+  }
+  .hotspot-card.critical { border-left-color:var(--danger); }
+  .hotspot-card.warn { border-left-color:var(--warn); }
+  .hotspot-card.watch { border-left-color:var(--blue); }
+  .hotspot-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .hotspot-name { font-weight:700; font-size:13px; }
+  .hotspot-addr { color:var(--muted); font-size:11px; margin-top:1px; }
+  .hotspot-stats { display:flex; gap:16px; margin-top:8px; }
+  .hs-stat .hs-val { font-weight:800; font-size:15px; }
+  .hs-stat .hs-lbl { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; }
+  .btn-action {
+    width:100%; background:var(--danger); color:#fff; border:none; border-radius:8px;
+    padding:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+    margin-top:8px; transition:.2s;
+  }
+  .btn-action:hover { opacity:.85; }
+  .btn-action.dark { background:var(--navy); }
+
+  /* Laporan */
+  .laporan-hero {
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    border-radius:16px; padding:24px; color:#fff; margin-bottom:16px;
+  }
+  .laporan-hero-amount { font-size:36px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+  .laporan-hero-change { display:flex; align-items:center; gap:6px; margin-top:6px;
+    background:rgba(255,255,255,.15); border-radius:8px; padding:4px 10px; display:inline-flex;
+    font-size:12px; font-weight:600; }
+  .dist-list { display:flex; flex-direction:column; gap:10px; }
+  .dist-item { display:flex; flex-direction:column; gap:4px; }
+  .dist-header { display:flex; justify-content:space-between; font-size:13px; }
+  .dist-label { font-weight:600; display:flex; align-items:center; gap:8px; }
+  .dist-dot { width:10px; height:10px; border-radius:50%; }
+  .dist-pct { font-weight:800; color:var(--navy); }
+  .dist-bar { height:8px; border-radius:4px; background:var(--border); overflow:hidden; }
+  .dist-fill { height:100%; border-radius:4px; }
+  .trx-table-header { display:flex; justify-content:space-between; align-items:center; margin:20px 0 12px; }
+  .filter-group { display:flex; gap:6px; }
+  .filter-tab {
+    padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600;
+    border:1px solid var(--border); background:#fff; cursor:pointer; font-family:inherit; transition:.2s;
+  }
+  .filter-tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+  /* Keamanan */
+  .security-hero {
+    display:grid; grid-template-columns:1fr auto; gap:16px; margin-bottom:16px;
+  }
+  .security-stat-card {
+    background:#fff; border-radius:14px; padding:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+  }
+  .security-alert-card {
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    border-radius:14px; padding:20px; color:#fff; min-width:180px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  }
+  .alert-count { font-size:48px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+  .alert-label { font-size:13px; opacity:.8; }
+  .alert-status { background:var(--danger); color:#fff; padding:4px 12px;
+    border-radius:20px; font-size:11px; font-weight:700; margin-top:8px; }
+  .security-status-card {
+    background:linear-gradient(135deg,var(--accent2),#059669);
+    border-radius:14px; padding:20px; color:#fff; flex:1;
+  }
+  .security-status-title { font-weight:800; font-size:18px; }
+  .security-status-sub { font-size:12px; opacity:.8; margin-top:4px; }
+  .btn-audit {
+    background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.3);
+    color:#fff; border-radius:8px; padding:8px 16px; font-size:12px;
+    font-weight:700; cursor:pointer; font-family:inherit; margin-top:12px;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .risk-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-top:8px; }
+  .risk-cell { height:32px; border-radius:6px; }
+  .risk-cell.tinggi { background:#ef4444; }
+  .risk-cell.sedang { background:#f97316; opacity:.7; }
+  .risk-cell.rendah { background:#d1d5db; }
+
+  /* Log table risk badges */
+  .risk-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+  .risk-badge.high { background:#fee2e2; color:#dc2626; }
+  .risk-badge.medium { background:#fff7ed; color:#ea580c; }
+  .risk-badge.low { background:#f0fdf4; color:#16a34a; }
+
+  /* Manajemen Zona additions */
+  .zona-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0 16px; }
+  .zona-sum-card {
+    border-radius:14px; padding:18px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+  }
+  .zona-sum-card.blue { background:linear-gradient(135deg,#eff6ff,#dbeafe); border-left:4px solid var(--blue); }
+  .zona-sum-card.yellow { background:linear-gradient(135deg,#fffbeb,#fef9c3); border-left:4px solid var(--accent); }
+  .zona-sum-card.green { background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-left:4px solid var(--accent2); }
+  .zona-sum-val { font-size:28px; font-weight:800; color:var(--navy); font-family:'Space Grotesk',sans-serif; }
+  .zona-sum-lbl { font-size:12px; color:var(--muted); font-weight:600; margin-top:2px; }
+  .occ-big { font-size:36px; font-weight:800; }
+
+  /* Tab bar for admin sections */
+  .admin-tab-bar { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+  .admin-tab {
+    padding:7px 16px; border-radius:8px; font-size:12px; font-weight:700;
+    border:1px solid var(--border); background:#fff; cursor:pointer; font-family:inherit; transition:.2s;
+  }
+  .admin-tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+  .admin-tab:hover:not(.active) { background:var(--bg); }
+
+  /* Responsive */
+  @media(max-width:768px) {
+    .admin-sidebar { width:64px; }
+    .sidebar-logo, .sidebar-section, .sidebar-item span, .sidebar-bottom span { display:none; }
+    .admin-main { margin-left:64px; }
+    .stats-grid { grid-template-columns:1fr 1fr; }
+    .zona-summary { grid-template-columns:1fr 1fr; }
+    .heatmap-wrap { flex-direction:column; }
+    .security-hero { grid-template-columns:1fr; }
+  }
+  @media(max-width:480px) {
+    .stats-grid { grid-template-columns:1fr; }
+    .zona-summary { grid-template-columns:1fr; }
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(16px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  .fade-in { animation:fadeInUp .4s ease both; }
+  .fade-in-2 { animation:fadeInUp .4s .1s ease both; }
+  .fade-in-3 { animation:fadeInUp .4s .2s ease both; }
+  .fade-in-4 { animation:fadeInUp .4s .3s ease both; }
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN: USER APP ============ -->
+<div id="screen-user" class="screen active">
+  <div class="user-header fade-in">
+    <div class="logo-wrap">
+      <div class="logo-icon">🅿️</div>
+      <div>
+        <div class="logo-text">BTP Smart Parking</div>
+        <div class="logo-sub">Bumi Tamalanrea Permai</div>
+      </div>
+    </div>
+    <button class="header-btn" onclick="showScreen('admin')">🔐 Admin</button>
+  </div>
+
+  <div class="hero-section fade-in-2">
+    <div class="hero-title">Parkir <span>Cerdas</span>,<br>Bebas Jukir Liar</div>
+    <div class="hero-sub">Scan QR · Pilih Slot · Bayar Digital · Dapat Reward</div>
+  </div>
+
+  <div class="slot-card fade-in-3">
+    <div class="slot-card-header">
+      <span class="slot-card-title">📍 Denah Slot Parkir</span>
+      <span class="live-dot"><span class="dot"></span>Live</span>
+    </div>
+    <div class="slot-zone-label">Zona A</div>
+    <div class="slot-grid" id="slot-grid-a"></div>
+    <div class="slot-zone-label">Zona B</div>
+    <div class="slot-grid" id="slot-grid-b"></div>
+    <div class="tarif-info">
+      <div class="tarif-badge"><div class="val">Rp 3.000</div><div class="lbl">per jam</div></div>
+      <div class="tarif-badge"><div class="val" id="selected-slot-display">—</div><div class="lbl">slot dipilih</div></div>
+      <div class="tarif-badge"><div class="val" id="avail-count">—</div><div class="lbl">tersedia</div></div>
+    </div>
+  </div>
+
+  <div class="qr-section fade-in-4" style="width:calc(100% - 32px)">
+    <div class="qr-card">
+      <div class="qr-title">🔲 Scan QR untuk Akses Web</div>
+      <div class="qr-sub">Scan kode ini untuk membuka BTP Smart Parking di browser Anda</div>
+      <div id="qr-code-user"></div>
+      <div class="qr-url-text" id="qr-url-label"></div>
+    </div>
+  </div>
+
+  <div class="reward-strip fade-in-4" style="width:calc(100% - 32px)">
+    <div class="reward-icon">⭐</div>
+    <div class="reward-text">
+      <strong>Parkir Tertib, Dapat Reward!</strong>
+      <span>Kumpulkan poin, tukar voucher UMKM & diskon</span>
+    </div>
+    <div class="reward-pts">+10 Poin</div>
+  </div>
+
+  <button class="btn-parkir fade-in-4" onclick="startParking()">
+    🚗 Mulai Parkir Sekarang
+  </button>
+
+  <div style="height:80px"></div>
+  <div class="user-bottom-nav">
+    <div class="nav-item active"><span class="nav-icon">🏠</span>Beranda</div>
+    <div class="nav-item" onclick="showScreen('payment')"><span class="nav-icon">💳</span>Bayar</div>
+    <div class="nav-item" onclick="showScreen('ticket')"><span class="nav-icon">🎫</span>Tiket</div>
+    <div class="nav-item"><span class="nav-icon">⭐</span>Reward</div>
+  </div>
+</div>
+
+<!-- ============ SCREEN: PAYMENT ============ -->
+<div id="screen-payment" class="screen" style="flex-direction:column">
+  <div class="payment-header">
+    <button class="back-btn" onclick="showScreen('user')">← Kembali</button>
+    <h2>💳 Pembayaran</h2>
+    <p>Selesaikan pembayaran untuk mengaktifkan slot parkir</p>
+  </div>
+  <div class="payment-content">
+    <div class="info-card fade-in">
+      <div class="info-row">
+        <span class="label">Lokasi</span>
+        <span class="value">BTP Blok A</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Slot</span>
+        <span class="value" id="pay-slot">A1</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Tarif</span>
+        <span class="value">Rp 3.000 / jam</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Status</span>
+        <span class="badge-green">✓ Tersedia</span>
+      </div>
+    </div>
+
+    <div class="timer-card fade-in-2">
+      <div class="timer-label">Batas Konfirmasi</div>
+      <div class="timer-display" id="confirm-timer">04:59</div>
+      <div class="timer-sub">Konfirmasi sebelum waktu habis</div>
+    </div>
+
+    <div class="payment-method fade-in-3">
+      <div class="method-title">Metode Pembayaran</div>
+      <div class="method-grid">
+        <button class="method-btn active" onclick="selectMethod(this,'QRIS')">
+          <span class="m-icon">📱</span>
+          <span class="m-name">QRIS</span>
+        </button>
+        <button class="method-btn" onclick="selectMethod(this,'GoPay')">
+          <span class="m-icon">💚</span>
+          <span class="m-name">GoPay</span>
+        </button>
+        <button class="method-btn" onclick="selectMethod(this,'OVO')">
+          <span class="m-icon">💜</span>
+          <span class="m-name">OVO</span>
+        </button>
+        <button class="method-btn" onclick="selectMethod(this,'Dana')">
+          <span class="m-icon">🔵</span>
+          <span class="m-name">Dana</span>
+        </button>
+        <button class="method-btn" onclick="selectMethod(this,'ShopeePay')">
+          <span class="m-icon">🧡</span>
+          <span class="m-name">ShopeePay</span>
+        </button>
+        <button class="method-btn" onclick="selectMethod(this,'LinkAja')">
+          <span class="m-icon">🔴</span>
+          <span class="m-name">LinkAja</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="qris-display fade-in-4">
+      <div class="qris-amount">Rp 3.000</div>
+      <div class="qris-note">Scan QR berikut untuk membayar via QRIS</div>
+      <div id="qr-payment"></div>
+      <div class="qris-note" style="margin-top:8px;color:#ef4444">⏰ QR berlaku 5 menit</div>
+    </div>
+
+    <button class="btn-bayar" onclick="confirmPayment()">✅ Konfirmasi Pembayaran</button>
+  </div>
+</div>
+
+<!-- ============ SCREEN: TICKET ============ -->
+<div id="screen-ticket" class="screen" style="flex-direction:column;align-items:center;padding:20px 16px 100px;background:var(--bg)">
+  <div style="width:100%;max-width:380px">
+    <button class="back-btn" style="background:var(--navy);color:#fff;margin-bottom:0" onclick="showScreen('user')">← Kembali</button>
+  </div>
+  <div class="ticket-card fade-in">
+    <div class="ticket-header">
+      <div class="ticket-success-icon">✅</div>
+      <h2>Parkir Berhasil!</h2>
+      <p>Tiket digital Anda telah diterbitkan</p>
+      <div class="ticket-id" id="ticket-id-display">TKT-BTP-20260521-001</div>
+    </div>
+    <div class="ticket-divider">
+      <div class="ticket-cut left"></div>
+      <div class="ticket-cut right"></div>
+    </div>
+    <div class="ticket-body">
+      <div class="ticket-row"><span class="tl">📍 Lokasi</span><span class="tv">BTP Blok A</span></div>
+      <div class="ticket-row"><span class="tl">🅿️ Slot</span><span class="tv" id="tkt-slot">A1</span></div>
+      <div class="ticket-row"><span class="tl">🕐 Masuk</span><span class="tv" id="tkt-masuk">—</span></div>
+      <div class="ticket-row"><span class="tl">🕐 Keluar</span><span class="tv">—</span></div>
+      <div class="ticket-row"><span class="tl">⏱ Durasi</span><span class="tv">1 jam</span></div>
+      <div class="ticket-row"><span class="tl">💳 Metode</span><span class="tv" id="tkt-metode">QRIS</span></div>
+      <div class="ticket-row"><span class="tl">💰 Total</span><span class="tv">Rp 3.000</span></div>
+    </div>
+    <div class="ticket-qr">
+      <div id="qr-ticket"></div>
+      <p>Tunjukkan QR ini saat keluar area parkir</p>
+    </div>
+  </div>
+  <div class="reward-notice fade-in-2">
+    <div class="rn-icon">🌟</div>
+    <strong>+10 Poin Reward Ditambahkan!</strong>
+    <span>Total poin Anda: 120 poin • Tukar dengan voucher UMKM</span>
+  </div>
+  <button class="btn-selesai fade-in-3" onclick="showScreen('user')">🏠 Kembali ke Beranda</button>
+</div>
+
+<!-- ============ SCREEN: ADMIN ============ -->
+<div id="screen-admin" class="screen" style="min-height:100vh">
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:22px;margin-bottom:4px">🅿️</div>
+      <div class="sidebar-logo-text">BTP Smart Parking</div>
+      <div class="sidebar-logo-sub">Admin Control Center</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Menu Utama</div>
+      <div class="sidebar-item active" onclick="showAdmin('dashboard')">
+        <span class="si-icon">📊</span><span>Dashboard</span>
+      </div>
+      <div class="sidebar-item" onclick="showAdmin('zona')">
+        <span class="si-icon">🗺️</span><span>Manajemen Zona</span>
+      </div>
+      <div class="sidebar-item" onclick="showAdmin('heatmap')">
+        <span class="si-icon">🔥</span><span>Heatmap</span>
+      </div>
+      <div class="sidebar-item" onclick="showAdmin('laporan')">
+        <span class="si-icon">📈</span><span>Laporan</span>
+      </div>
+      <div class="sidebar-item" onclick="showAdmin('keamanan')">
+        <span class="si-icon">🔒</span><span>Keamanan</span>
+        <span class="sidebar-badge">12</span>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-item" onclick="void(0)">
+        <span class="si-icon">⚙️</span><span>Settings</span>
+      </div>
+      <div class="sidebar-item" onclick="showScreen('user')">
+        <span class="si-icon">↩️</span><span>User App</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <div class="topbar-left">
+        <input class="topbar-search" placeholder="🔍 Cari data, zona, atau petunjuk...">
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn-primary">⬇️ Unduh Laporan</button>
+        <div class="topbar-icon-btn">🔔<div class="notif-dot"></div></div>
+        <div class="topbar-icon-btn">❓</div>
+        <div class="admin-avatar">A</div>
+      </div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- DASHBOARD -->
+      <div id="admin-dashboard" class="admin-section active">
+        <div class="page-title">📊 Dashboard</div>
+        <div class="page-sub">Selamat datang! Ini ringkasan aktivitas parkir hari ini.</div>
+
+        <div class="stats-grid">
+          <div class="stat-card fade-in">
+            <div class="stat-card-top">
+              <div class="stat-card-icon blue">🚗</div>
+              <span class="stat-change up">↑ 8.2%</span>
+            </div>
+            <div class="stat-val">1,284</div>
+            <div class="stat-lbl">Kendaraan Aktif</div>
+          </div>
+          <div class="stat-card fade-in-2">
+            <div class="stat-card-top">
+              <div class="stat-card-icon green">💰</div>
+              <span class="stat-change up">↑ 12.5%</span>
+            </div>
+            <div class="stat-val">Rp 12,45jt</div>
+            <div class="stat-lbl">Pendapatan Hari Ini</div>
+          </div>
+          <div class="stat-card fade-in-3">
+            <div class="stat-card-top">
+              <div class="stat-card-icon red">⚠️</div>
+              <span class="stat-change down">92.4%</span>
+            </div>
+            <div class="stat-val">Zona A-3</div>
+            <div class="stat-lbl">Zona Paling Padat</div>
+          </div>
+        </div>
+
+        <div class="chart-card fade-in-2">
+          <div class="chart-header">
+            <span class="chart-title">📈 Tren Pendapatan Mingguan</span>
+            <select class="chart-filter"><option>Minggu Ini</option><option>Bulan Ini</option></select>
+          </div>
+          <div class="chart-bars">
+            <div class="chart-bar-wrap"><div class="chart-bar" style="height:55%"></div><span class="chart-day">Sen</span></div>
+            <div class="chart-bar-wrap"><div class="chart-bar" style="height:68%"></div><span class="chart-day">Sel</span></div>
+            <div class="chart-bar-wrap"><div class="chart-bar highlight" style="height:92%"></div><span class="chart-day">Rab</span></div>
+            <div class="chart-bar-wrap"><div class="chart-bar" style="height:78%"></div><span class="chart-day">Kam</span></div>
+            <div class="chart-bar-wrap"><div class="chart-bar" style="height:85%"></div><span class="chart-day">Jum</span></div>
+            <div class="chart-bar-wrap"><div class="chart-bar" style="height:60%"></div><span class="chart-day">Sab</span></div>
+            <div class="chart-bar-wrap"><div class="chart-bar" style="height:40%"></div><span class="chart-day">Min</span></div>
+          </div>
+        </div>
+
+        <div class="chart-card fade-in-3">
+          <div class="chart-header">
+            <span class="chart-title">🔔 Notifikasi Cepat</span>
+            <span style="color:var(--blue);font-size:12px;font-weight:700;cursor:pointer">Lihat Semua</span>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item danger"><span class="notif-icon">🚨</span><div class="notif-text"><strong>Pelanggaran Parkir di Zona B-2</strong><span>2 menit yang lalu</span></div></div>
+            <div class="notif-item success"><span class="notif-icon">✅</span><div class="notif-text"><strong>Pembayaran Berhasil: B 1234 ABC</strong><span>15 menit yang lalu</span></div></div>
+            <div class="notif-item info"><span class="notif-icon">ℹ️</span><div class="notif-text"><strong>Update Sistem: Maintenance Selesai</strong><span>1 jam yang lalu</span></div></div>
+            <div class="notif-item warn"><span class="notif-icon">⚡</span><div class="notif-text"><strong>Lonjakan Trafik: Pintu Selatan</strong><span>2 jam yang lalu</span></div></div>
+          </div>
+        </div>
+
+        <div class="chart-card fade-in-4">
+          <div class="chart-header">
+            <span class="chart-title">🅿️ Zona Parkir Real-time</span>
+            <div style="display:flex;gap:8px">
+              <button class="chart-filter" style="cursor:pointer">⚙️ Filter</button>
+              <button class="chart-filter" style="cursor:pointer">⬇️</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Nama Zona</th><th>Lokasi</th><th>Kapasitas</th><th>Status</th><th>Aktivitas</th>
+              </tr></thead>
+              <tbody>
+                <tr><td><strong>Zona A (VVIP)</strong></td><td>Lantai 1 - Selatan</td><td>45 / 50</td><td><span class="badge penuh">Penuh</span></td><td><div class="progress-bar"><div class="progress-fill red" style="width:90%"></div></div></td></tr>
+                <tr><td><strong>Zona B (Umum)</strong></td><td>Lantai 1 - Barat</td><td>120 / 300</td><td><span class="badge tersedia">Tersedia</span></td><td><div class="progress-bar"><div class="progress-fill green" style="width:40%"></div></div></td></tr>
+                <tr><td><strong>Zona C (Staf)</strong></td><td>Lantai Dasar</td><td>80 / 100</td><td><span class="badge padat">Padat</span></td><td><div class="progress-bar"><div class="progress-fill yellow" style="width:80%"></div></div></td></tr>
+                <tr><td><strong>Zona D (Motor)</strong></td><td>Luar - Sisi Timur</td><td>250 / 500</td><td><span class="badge tersedia">Tersedia</span></td><td><div class="progress-bar"><div class="progress-fill green" style="width:50%"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:12px 0 0;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
+            <span>Menampilkan 4 dari 12 zona aktif</span>
+            <div style="display:flex;gap:8px">
+              <button class="filter-tab">← Sebelumnya</button>
+              <button class="filter-tab active">Selanjutnya →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MANAJEMEN ZONA -->
+      <div id="admin-zona" class="admin-section">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="page-title">🗺️ Daftar Zona Parkir</div>
+            <div class="page-sub">Kelola kapasitas, tarif, dan status operasional di seluruh titik infrastruktur parkir.</div>
+          </div>
+          <button class="topbar-btn-primary">➕ Tambah Zona Baru</button>
+        </div>
+        <div class="zona-summary">
+          <div class="zona-sum-card blue">
+            <div class="zona-sum-val">1.240</div>
+            <div class="zona-sum-lbl">📦 Total Kapasitas <span style="color:var(--accent2);font-size:10px">+12% bulan ini</span></div>
+          </div>
+          <div class="zona-sum-card yellow">
+            <div class="zona-sum-val">Rp 8.500</div>
+            <div class="zona-sum-lbl">💰 Rata-rata Tarif</div>
+          </div>
+          <div class="zona-sum-card green">
+            <div class="occ-big" style="color:var(--navy);font-family:'Space Grotesk',sans-serif">82.4%</div>
+            <div class="zona-sum-lbl">📊 Okupansi Real-time — Tertinggi di Zona VIP</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="admin-tab-bar">
+            <button class="admin-tab active">Semua Zona</button>
+            <button class="admin-tab">VIP</button>
+            <button class="admin-tab">Reguler</button>
+            <button class="admin-tab">Motor</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Nama Zona</th><th>Kapasitas Total</th><th>Tarif / Jam</th><th>Status Operasional</th><th>Aksi</th>
+              </tr></thead>
+              <tbody>
+                <tr><td><div style="font-weight:700">⭐ Zona VIP Sudirman</div><div style="font-size:11px;color:var(--muted)">Blok A1 - A5</div></td><td>50 Lot</td><td style="color:var(--blue);font-weight:700">Rp 15.000</td><td><span class="badge aktif">● Aktif</span></td><td><span style="cursor:pointer;margin-right:8px">✏️</span><span style="cursor:pointer">👁️</span></td></tr>
+                <tr><td><div style="font-weight:700">🚗 Reguler Basement 1</div><div style="font-size:11px;color:var(--muted)">Blok B1 - B20</div></td><td>450 Lot</td><td style="color:var(--blue);font-weight:700">Rp 5.000</td><td><span class="badge aktif">● Aktif</span></td><td><span style="cursor:pointer;margin-right:8px">✏️</span><span style="cursor:pointer">👁️</span></td></tr>
+                <tr><td><div style="font-weight:700">🛵 Area Motor Gedung B</div><div style="font-size:11px;color:var(--muted)">Outdoor Sisi Barat</div></td><td>600 Lot</td><td style="color:var(--blue);font-weight:700">Rp 2.000</td><td><span class="badge tutup">● Tutup</span></td><td><span style="cursor:pointer;margin-right:8px">✏️</span><span style="cursor:pointer">👁️</span></td></tr>
+                <tr><td><div style="font-weight:700">🚗 Reguler Basement 2</div><div style="font-size:11px;color:var(--muted)">Blok C1 - C15</div></td><td>300 Lot</td><td style="color:var(--blue);font-weight:700">Rp 5.000</td><td><span class="badge aktif">● Aktif</span></td><td><span style="cursor:pointer;margin-right:8px">✏️</span><span style="cursor:pointer">👁️</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:12px 0 0;font-size:12px;color:var(--muted)">Menampilkan 4 dari 12 Zona</div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:12px">🗺️ Peta Lokasi Zona</div>
+          <div style="background:#1a1f2e;border-radius:12px;height:200px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);font-size:13px;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a1f2e,#0f2057);opacity:.8"></div>
+            <div style="position:relative;text-align:center">
+              <div style="font-size:32px;margin-bottom:8px">🗺️</div>
+              <div>Peta Interaktif BTP</div>
+              <div style="font-size:11px;margin-top:4px">● Status Sistem: Normal</div>
+            </div>
+            <div style="position:absolute;bottom:12px;right:12px">
+              <button class="topbar-btn-primary" style="font-size:11px;padding:6px 12px">⛶ Lihat Peta Penuh</button>
+            </div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:12px">📋 Log Aktivitas Terbaru</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:8px;height:8px;background:var(--blue);border-radius:50%;flex-shrink:0"></span><div><strong>Perubahan tarif Zona VIP</strong><div style="color:var(--muted);font-size:11px">Oleh: Admin_Andi • 2 Jam yang lalu</div></div></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:8px;height:8px;background:var(--danger);border-radius:50%;flex-shrink:0"></span><div><strong>Penutupan Zona Motor B</strong><div style="color:var(--muted);font-size:11px">Maintenance Berkala • 5 jam yang lalu</div></div></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:8px;height:8px;background:var(--accent2);border-radius:50%;flex-shrink:0"></span><div><strong>Optimasi Kapasitas Basement 2</strong><div style="color:var(--muted);font-size:11px">Auto-system sync • Kemarin</div></div></div>
+          </div>
+          <div style="margin-top:12px;text-align:center"><span style="color:var(--blue);font-size:12px;font-weight:700;cursor:pointer">Lihat Semua Aktivitas</span></div>
+        </div>
+      </div>
+
+      <!-- HEATMAP -->
+      <div id="admin-heatmap" class="admin-section">
+        <div class="page-title">🔥 Heatmap</div>
+        <div class="page-sub">Analisis visual kepadatan parkir liar — 3 Hotspot Terdeteksi Otomatis</div>
+        <div style="margin-top:20px" class="chart-card">
+          <div class="heatmap-wrap">
+            <div>
+              <div class="heatmap-map">
+                <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1f2e,#0f2057);position:relative">
+                  <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(6,1fr);gap:2px;padding:8px;opacity:.3">
+                    <!-- grid lines -->
+                  </div>
+                  <div class="hotspot critical" style="width:80px;height:80px;top:30%;left:35%;transform:translate(-50%,-50%)"></div>
+                  <div class="hotspot warn" style="width:60px;height:60px;top:60%;left:65%;transform:translate(-50%,-50%)"></div>
+                  <div class="hotspot normal" style="width:50px;height:50px;top:20%;left:70%;transform:translate(-50%,-50%)"></div>
+                  <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:8px 10px;color:#fff;font-size:11px">
+                    <div style="font-weight:700;margin-bottom:4px">Legenda Kepadatan</div>
+                    <div class="heatmap-legend">
+                      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Kritis (Parkir Liar)</div>
+                      <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Padat (90%+)</div>
+                      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Normal</div>
+                    </div>
+                  </div>
+                  <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:6px 10px;color:#fff;font-size:11px">
+                    Filter Waktu: <strong>14:00 WIB</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="heatmap-analysis">
+              <div class="hotspot-card critical">
+                <div class="hotspot-card-header">
+                  <div><div class="hotspot-name">Jl. Jenderal Sudirman</div><div class="hotspot-addr">Area Trotoar Depan Mall</div></div>
+                  <span class="badge penuh">KRITIS</span>
+                </div>
+                <div class="hotspot-stats">
+                  <div class="hs-stat"><div class="hs-val" style="color:var(--danger)">94%</div><div class="hs-lbl">Kepadatan</div></div>
+                  <div class="hs-stat"><div class="hs-val">45m</div><div class="hs-lbl">Durasi</div></div>
+                </div>
+                <button class="btn-action">📋 Tindak Lanjuti</button>
+              </div>
+              <div class="hotspot-card warn">
+                <div class="hotspot-card-header">
+                  <div><div class="hotspot-name">Bundaran HI</div><div class="hotspot-addr">Akses Jalur Busway</div></div>
+                  <span class="badge padat">WASPADA</span>
+                </div>
+                <div class="hotspot-stats">
+                  <div class="hs-stat"><div class="hs-val" style="color:var(--warn)">78%</div><div class="hs-lbl">Kepadatan</div></div>
+                  <div class="hs-stat"><div class="hs-val">5 Mobil</div><div class="hs-lbl">Unit</div></div>
+                </div>
+                <button class="btn-action dark">👁️ Cek CCTV</button>
+              </div>
+              <div class="hotspot-card watch">
+                <div class="hotspot-card-header">
+                  <div><div class="hotspot-name">Kawasan Kota Tua</div><div class="hotspot-addr">Pintu Masuk Utama</div></div>
+                  <span class="badge-blue">DIPANTAU</span>
+                </div>
+                <div class="hotspot-stats">
+                  <div class="hs-stat"><div class="hs-val">↘ Menurun</div><div class="hs-lbl">Prediksi</div></div>
+                  <div class="hs-stat"><div class="hs-val" style="color:var(--accent2)">↘</div><div class="hs-lbl">Tren</div></div>
+                </div>
+              </div>
+              <div style="background:#fff;border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                  <span style="font-size:12px;font-weight:600">Akurasi Sistem</span>
+                  <span style="font-size:12px;font-weight:800;color:var(--blue)">98.2%</span>
+                </div>
+                <div class="progress-bar" style="height:8px"><div class="progress-fill green" style="width:98.2%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LAPORAN -->
+      <div id="admin-laporan" class="admin-section">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="page-title">📈 Laporan Retribusi & Rekap Pemasukan</div>
+            <div class="page-sub">Analisis komprehensif kinerja keuangan parkir seluruh zona.</div>
+          </div>
+          <button class="topbar-btn-primary">⬇️ Unduh Laporan</button>
+        </div>
+        <div style="margin-top:20px;display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px">
+          <div class="laporan-hero">
+            <div style="font-size:12px;opacity:.7;font-weight:600">Total Pendapatan (Bulan Ini)</div>
+            <div class="laporan-hero-amount">Rp 842.500.000</div>
+            <div class="laporan-hero-change">↑ +12.4% vs bulan lalu</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-top"><div class="stat-card-icon blue">🔢</div></div>
+            <div class="stat-val" style="font-size:22px">142,590</div>
+            <div class="stat-lbl">Total Transaksi</div>
+            <div style="margin-top:8px"><div class="progress-bar"><div class="progress-fill yellow" style="width:75%"></div></div><div style="font-size:10px;color:var(--muted);margin-top:4px">75% Target bulanan tercapai</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-top"><div class="stat-card-icon green">📱</div></div>
+            <div class="stat-val" style="font-size:22px;color:var(--blue)">QRIS</div>
+            <div class="stat-lbl">Metode Terpopuler (68%)</div>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-top:16px">
+          <div class="chart-title" style="margin-bottom:16px">📊 Distribusi Pembayaran</div>
+          <div class="dist-list">
+            <div class="dist-item"><div class="dist-header"><span class="dist-label"><div class="dist-dot" style="background:var(--navy)"></div>QRIS</span><span class="dist-pct">68%</span></div><div class="dist-bar"><div class="dist-fill" style="width:68%;background:var(--navy)"></div></div></div>
+            <div class="dist-item"><div class="dist-header"><span class="dist-label"><div class="dist-dot" style="background:#f97316"></div>E-Wallet</span><span class="dist-pct">22%</span></div><div class="dist-bar"><div class="dist-fill" style="width:22%;background:#f97316"></div></div></div>
+            <div class="dist-item"><div class="dist-header"><span class="dist-label"><div class="dist-dot" style="background:#94a3b8"></div>Tunai</span><span class="dist-pct">10%</span></div><div class="dist-bar"><div class="dist-fill" style="width:10%;background:#94a3b8"></div></div></div>
+          </div>
+          <div style="background:#f0fdf4;border-radius:8px;padding:10px;margin-top:12px;font-size:11px;color:#16a34a;font-style:italic;text-align:center">"Sistem pembayaran digital meningkat 15% dari kuartal sebelumnya."</div>
+        </div>
+        <div class="chart-card">
+          <div class="trx-table-header">
+            <span class="chart-title">🧾 Detail Transaksi Harian</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="filter-group">
+                <button class="filter-tab active">Semua</button>
+                <button class="filter-tab">QRIS</button>
+                <button class="filter-tab">Tunai</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID Transaksi</th><th>Waktu</th><th>Zona</th><th>Metode</th><th>Nominal</th></tr></thead>
+              <tbody>
+                <tr><td style="color:var(--blue);font-weight:700">#TRX-9921</td><td>31 Okt 2023, 14:20</td><td>Zona C - Pusat Kota</td><td><span class="badge-blue">QRIS</span></td><td style="font-weight:700">Rp 15.000</td></tr>
+                <tr><td style="color:var(--blue);font-weight:700">#TRX-9920</td><td>31 Okt 2023, 14:15</td><td>Zona A - Bandara</td><td><span style="background:#fff7ed;color:#ea580c;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">E-Wallet</span></td><td style="font-weight:700">Rp 45.000</td></tr>
+                <tr><td style="color:var(--blue);font-weight:700">#TRX-9919</td><td>31 Okt 2023, 14:12</td><td>Zona B - Mall</td><td><span style="background:#f1f5f9;color:#64748b;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">Tunai</span></td><td style="font-weight:700">Rp 5.000</td></tr>
+                <tr><td style="color:var(--blue);font-weight:700">#TRX-9918</td><td>31 Okt 2023, 13:58</td><td>Zona C - Pusat Kota</td><td><span class="badge-blue">QRIS</span></td><td style="font-weight:700">Rp 20.000</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEAMANAN -->
+      <div id="admin-keamanan" class="admin-section">
+        <div class="page-title">🔒 Keamanan & Kontrol</div>
+        <div class="page-sub">Pantau aktivitas mencurigakan dan amankan ekosistem parkir secara real-time.</div>
+        <div class="security-hero" style="margin-top:20px">
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div class="security-stat-card" style="flex:1;min-width:200px">
+              <div class="chart-title" style="margin-bottom:12px">📊 Statistik Insiden Mingguan</div>
+              <div class="chart-bars" style="height:80px">
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:40%;background:#ef4444"></div><span class="chart-day">Sen</span></div>
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:60%;background:#ef4444"></div><span class="chart-day">Sel</span></div>
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:80%;background:#ef4444"></div><span class="chart-day">Rab</span></div>
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:45%;background:#ef4444"></div><span class="chart-day">Kam</span></div>
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:55%;background:#ef4444"></div><span class="chart-day">Jum</span></div>
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:30%;background:#ef4444"></div><span class="chart-day">Sab</span></div>
+                <div class="chart-bar-wrap"><div class="chart-bar" style="height:20%;background:#ef4444"></div><span class="chart-day">Min</span></div>
+              </div>
+            </div>
+            <div class="security-status-card">
+              <div style="font-size:11px;opacity:.8;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Status Sistem</div>
+              <div class="security-status-title" style="margin-top:8px">Semua Jalur Aman</div>
+              <div class="security-status-sub">Enkripsi end-to-end aktif di 42 zona.</div>
+              <button class="btn-audit">🛡️ Audit Sistem</button>
+            </div>
+          </div>
+          <div class="security-alert-card">
+            <div style="font-size:11px;opacity:.7">ANCAMAN TINGGI</div>
+            <div class="alert-count">12</div>
+            <div class="alert-label">Insiden Aktif</div>
+            <div class="alert-status">⚠ AKTIF</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">🕐 Log Keamanan Real-Time</span>
+            <button class="chart-filter" style="cursor:pointer">⚙️ Filter</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Data diperbarui setiap 5 detik</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Timestamp</th><th>Tipe Aktivitas</th><th>User ID / Device</th><th>Tingkat Risiko</th><th>Aksi</th></tr></thead>
+              <tbody>
+                <tr><td style="font-family:'Space Grotesk',sans-serif;font-size:12px">14:22:05</td><td>🔲 Spam scan QR</td><td style="font-family:'Space Grotesk',sans-serif">USR-9281-Z</td><td><span class="risk-badge high">High</span></td><td><button class="btn-action" style="width:auto;padding:4px 12px;margin:0;font-size:11px">Blokir</button></td></tr>
+                <tr><td style="font-family:'Space Grotesk',sans-serif;font-size:12px">14:21:40</td><td>💳 Transaksi Palsu</td><td style="font-family:'Space Grotesk',sans-serif">TRX-7721-B</td><td><span class="risk-badge medium">Medium</span></td><td><button class="btn-action dark" style="width:auto;padding:4px 12px;margin:0;font-size:11px">Tinjau</button></td></tr>
+                <tr><td style="font-family:'Space Grotesk',sans-serif;font-size:12px">14:18:12</td><td>⭐ Abuse Poin</td><td style="font-family:'Space Grotesk',sans-serif">DEV-5512-P</td><td><span class="risk-badge low">Low</span></td><td><button class="btn-action dark" style="width:auto;padding:4px 12px;margin:0;font-size:11px">Monitor</button></td></tr>
+                <tr><td style="font-family:'Space Grotesk',sans-serif;font-size:12px">14:15:33</td><td>👤 Login Simultan</td><td style="font-family:'Space Grotesk',sans-serif">USR-1022-X</td><td><span class="risk-badge medium">Medium</span></td><td><button class="btn-action dark" style="width:auto;padding:4px 12px;margin:0;font-size:11px">Tinjau</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:12px 0 0;font-size:12px;color:var(--muted)">Menampilkan 1-4 dari 128 kejadian hari ini</div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header" style="margin-bottom:12px">
+            <span class="chart-title">🗺️ Peta Panas Kerawanan Zona</span>
+            <div style="display:flex;gap:12px;font-size:11px;font-weight:700">
+              <span style="color:var(--danger)">● Tinggi</span>
+              <span style="color:#f97316">● Sedang</span>
+              <span style="color:#94a3b8">● Rendah</span>
+            </div>
+          </div>
+          <div class="risk-grid">
+            <div class="risk-cell tinggi"></div><div class="risk-cell rendah"></div><div class="risk-cell sedang"></div><div class="risk-cell rendah"></div><div class="risk-cell tinggi"></div><div class="risk-cell rendah"></div>
+            <div class="risk-cell rendah"></div><div class="risk-cell rendah"></div><div class="risk-cell rendah"></div><div class="risk-cell rendah"></div><div class="risk-cell rendah"></div><div class="risk-cell rendah"></div>
+            <div class="risk-cell sedang"></div><div class="risk-cell rendah"></div><div class="risk-cell tinggi"></div><div class="risk-cell rendah"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /admin-content -->
+  </div><!-- /admin-main -->
+</div><!-- /screen-admin -->
+
+<script>
+// ===== STATE =====
+let selectedSlot = null;
+let selectedMethod = 'QRIS';
+let timerInterval = null;
+let confirmSeconds = 299;
+
+// ===== SLOTS DATA =====
+const slotsA = [
+  {id:'A1',status:'kosong'},{id:'A2',status:'terisi'},{id:'A3',status:'kosong'},
+];
+const slotsB = [
+  {id:'B1',status:'kosong'},{id:'B2',status:'kosong'},{id:'B3',status:'terisi'},
+];
+
+function renderSlots() {
+  ['a','b'].forEach(z => {
+    const slots = z === 'a' ? slotsA : slotsB;
+    const grid = document.getElementById('slot-grid-' + z);
+    grid.innerHTML = '';
+    slots.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'slot-item ' + s.status + (selectedSlot === s.id ? ' selected' : '');
+      el.innerHTML = `<span class="slot-icon">${s.status === 'terisi' ? '🚗' : '⬜'}</span>
+        <span class="slot-name">${s.id}</span>
+        <span class="slot-status">${s.status === 'kosong' ? 'Kosong' : 'Terisi'}</span>`;
+      if (s.status === 'kosong') el.onclick = () => selectSlot(s.id);
+      grid.appendChild(el);
+    });
+  });
+  const all = [...slotsA, ...slotsB];
+  const avail = all.filter(s => s.status === 'kosong').length;
+  document.getElementById('avail-count').textContent = avail + ' slot';
+  document.getElementById('selected-slot-display').textContent = selectedSlot || '—';
+}
+
+function selectSlot(id) {
+  selectedSlot = id;
+  renderSlots();
+}
+
+// ===== SCREENS =====
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'payment') {
+    document.getElementById('pay-slot').textContent = selectedSlot || 'A1';
+    startConfirmTimer();
+    generatePaymentQR();
+  }
+  if (name === 'ticket') {
+    generateTicket();
+  }
+  window.scrollTo(0,0);
+}
+
+// ===== ADMIN SECTIONS =====
+function showAdmin(section) {
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('admin-' + section).classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ===== PAYMENT =====
+function selectMethod(btn, name) {
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedMethod = name;
+}
+
+function startConfirmTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  confirmSeconds = 299;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    confirmSeconds--;
+    if (confirmSeconds <= 0) { clearInterval(timerInterval); confirmSeconds = 0; }
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(confirmSeconds / 60).toString().padStart(2,'0');
+  const s = (confirmSeconds % 60).toString().padStart(2,'0');
+  const el = document.getElementById('confirm-timer');
+  if (el) el.textContent = m + ':' + s;
+}
+
+function confirmPayment() {
+  if (timerInterval) clearInterval(timerInterval);
+  // mark slot as terisi
+  const allSlots = [...slotsA, ...slotsB];
+  const slot = allSlots.find(s => s.id === (selectedSlot || 'A1'));
+  if (slot) slot.status = 'terisi';
+  showScreen('ticket');
+}
+
+// ===== TICKET =====
+function generateTicket() {
+  const now = new Date();
+  const pad = n => n.toString().padStart(2,'0');
+  const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  const dateStr = pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
+  const el = document.getElementById('tkt-masuk');
+  if (el) el.textContent = dateStr + ' ' + timeStr;
+  const slotEl = document.getElementById('tkt-slot');
+  if (slotEl) slotEl.textContent = selectedSlot || 'A1';
+  const metodeEl = document.getElementById('tkt-metode');
+  if (metodeEl) metodeEl.textContent = selectedMethod;
+  const tktId = 'TKT-BTP-' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '-' + Math.floor(Math.random()*900+100);
+  const idEl = document.getElementById('ticket-id-display');
+  if (idEl) idEl.textContent = tktId;
+  generateTicketQR(tktId);
+}
+
+// ===== START PARKING =====
+function startParking() {
+  if (!selectedSlot) {
+    alert('Silakan pilih slot parkir terlebih dahulu!');
+    return;
+  }
+  showScreen('payment');
+}
+
+// ===== QR CODE GENERATION =====
+function generateQRCodes() {
+  const url = window.location.href.split('?')[0];
+  
+  // User QR
+  const userQR = document.getElementById('qr-code-user');
+  if (userQR && typeof QRCode !== 'undefined') {
+    userQR.innerHTML = '';
+    new QRCode(userQR, {
+      text: url,
+      width: 160, height: 160,
+      colorDark: '#0f2057', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    document.getElementById('qr-url-label').textContent = url;
+  }
+}
+
+function generatePaymentQR() {
+  const payQR = document.getElementById('qr-payment');
+  if (payQR && typeof QRCode !== 'undefined') {
+    payQR.innerHTML = '';
+    new QRCode(payQR, {
+      text: 'QRIS:BTP-SMART-PARKING:' + (selectedSlot||'A1') + ':3000:' + Date.now(),
+      width: 180, height: 180,
+      colorDark: '#0f2057', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+}
+
+function generateTicketQR(tktId) {
+  const ticketQR = document.getElementById('qr-ticket');
+  if (ticketQR && typeof QRCode !== 'undefined') {
+    ticketQR.innerHTML = '';
+    new QRCode(ticketQR, {
+      text: 'BTP-TICKET:' + tktId,
+      width: 160, height: 160,
+      colorDark: '#0f2057', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+}
+
+// ===== INIT =====
+window.onload = function() {
+  renderSlots();
+  setTimeout(generateQRCodes, 300);
+  
+  // Simulate live updates
+  setInterval(() => {
+    // random flicker of available count
+  }, 5000);
+};
+</script>
+</body>
+</html>
